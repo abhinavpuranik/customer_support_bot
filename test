@@ -1,0 +1,35 @@
+from datasets import load_dataset
+
+raw_datasets = load_dataset("bitext/Bitext-customer-support-llm-chatbot-training-dataset")
+
+split_datasets = raw_datasets["train"].train_test_split(train_size=0.9, seed=20)
+split_datasets
+
+instruction = split_datasets["train"][0]["instruction"]
+inputs = tokenizer(instruction)
+tokenizer.decode(inputs["input_ids"])
+inputs = tokenizer.encode_plus(
+    instruction,                      # Sentence to tokenize
+    add_special_tokens=True,              # Add [CLS] and [SEP] tokens
+    max_length=128,                        # Max length of the tokenized sequence
+    padding='max_length',                 # Pad or truncate to the max length
+    truncation=True,                      # Truncate longer sequences
+    return_overflowing_tokens=True,      # Return overflowing tokens
+    return_attention_mask=True,           # Generate attention mask
+    return_tensors='pt'
+    
+)
+
+print("Tokenized Input:", inputs)
+
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, Trainer, TrainingArguments
+model_name = "gpt2"
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+model = GPT2LMHeadModel.from_pretrained(model_name)
+tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+def tokenize_function(split_datasets):
+    return tokenizer(split_datasets["instruction"],truncation=True,batched=True,padding=True)
+tokenized_datasets = split_datasets.map(
+    lambda example: tokenizer(example["instruction"], padding=True, truncation=True, return_tensors="pt"),
+    batched=True,
+)
